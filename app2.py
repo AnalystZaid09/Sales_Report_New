@@ -82,7 +82,7 @@ if st.button("🚀 Generate Analysis", type="primary"):
                     Working["Brand"] = Working["asin"].map(brand_map)
                     st.write("✓ Brand Manager and Brand mapped")
 
-                    # 🔹 NEW: STEP 5 – Vendor SKU mapping (VLOOKUP-style)
+                    # STEP 5 – Vendor SKU mapping (VLOOKUP-style)
                     st.write("**Step 5:** Mapping Vendor SKU (VLOOKUP-style)...")
 
                     vendor_candidates = [
@@ -92,7 +92,8 @@ if st.button("🚀 Generate Analysis", type="primary"):
                     if vendor_candidates:
                         vendor_col = vendor_candidates[0]
                     else:
-                        vendor_col = pm.columns[3]  # 4th column like Excel VLOOKUP col_index_num = 4
+                        # 4th column like Excel VLOOKUP(P2, A:G, 4, 0)
+                        vendor_col = pm.columns[3]
 
                     vendor_map = pm_unique.set_index("asin")[vendor_col]
                     Working["Vendor SKU"] = Working["asin"].map(vendor_map)
@@ -123,7 +124,7 @@ if st.button("🚀 Generate Analysis", type="primary"):
                         cols.insert(price_index + 1, cols.pop(cols.index("cost")))
                         Working = Working[cols]
 
-                    # 🔹 NEW: Reorder Vendor SKU between asin and item-status
+                    # Reorder Vendor SKU between asin and item-status (Vendor SKU right after asin)
                     cols = list(Working.columns)
                     if "asin" in cols and "Vendor SKU" in cols:
                         cols.remove("Vendor SKU")
@@ -149,7 +150,7 @@ if st.button("🚀 Generate Analysis", type="primary"):
                     Working = Working[Working['item-status'] != 'Cancelled']
                     st.write(f"✓ Filtered from {original_count} to {len(Working)} valid orders")
                 
-                # 🔹 NEW: Prepare raw data Excel once so we can reuse
+                # Prepare raw data Excel once so we can reuse
                 raw_output = BytesIO()
                 with pd.ExcelWriter(raw_output, engine='openpyxl') as writer:
                     Working.to_excel(writer, sheet_name='Processed Orders', index=False)
@@ -176,12 +177,13 @@ if st.button("🚀 Generate Analysis", type="primary"):
                     top_manager = Working.groupby('Brand Manager')['item-price'].sum().idxmax()
                     st.metric("Top Manager", top_manager)
 
-                # 🔹 NEW: Quick raw data download near metrics
+                # Raw data download near metrics (TOP)
                 st.download_button(
                     label="📥 Download Raw Data (Processed Orders)",
                     data=raw_output,
                     file_name="processed_orders_raw.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="download_raw_top"
                 )
                 
                 # Generate pivot tables
@@ -212,7 +214,7 @@ if st.button("🚀 Generate Analysis", type="primary"):
                         level=1
                     )
 
-                    # 🔹 NEW: Grand Total row at bottom
+                    # Grand Total row at bottom
                     grand_total_bm = pivot_Brand_Manager.sum(numeric_only=True).to_frame().T
                     grand_total_bm.index = pd.Index(["Grand Total"], name=pivot_Brand_Manager.index.name)
                     pivot_Brand_Manager_with_total = pd.concat(
@@ -252,7 +254,7 @@ if st.button("🚀 Generate Analysis", type="primary"):
                         level=1
                     )
 
-                    # 🔹 NEW: Grand Total row at bottom
+                    # Grand Total row at bottom
                     grand_total_brand = pivot_Brand.sum(numeric_only=True).to_frame().T
                     grand_total_brand.index = pd.Index(["Grand Total"], name=pivot_Brand.index.name)
                     pivot_Brand_with_total = pd.concat(
@@ -293,9 +295,10 @@ if st.button("🚀 Generate Analysis", type="primary"):
                         }
                     )
 
+                    # Sort by Brand alphabetical then ASIN
                     pivot_Brand_ASIN = pivot_Brand_ASIN.sort_index(level=["Brand", "asin"])
 
-                    # Grand Total row at the end (already existed, kept)
+                    # Grand Total row at the end
                     grand_total_values = pivot_Brand_ASIN.sum(numeric_only=True).to_frame().T
                     grand_total_index = pd.MultiIndex.from_tuples(
                         [("Grand Total", "")],
@@ -340,6 +343,7 @@ if st.button("🚀 Generate Analysis", type="primary"):
                         ascending=[True, True, False]
                     )
 
+                    # Brand subtotals (e.g. Beetel Total)
                     brand_totals = (
                         base
                         .groupby(["Brand Manager", "Brand"], as_index=False)[agg_cols]
@@ -348,6 +352,7 @@ if st.button("🚀 Generate Analysis", type="primary"):
                     brand_totals["asin"] = brand_totals["Brand"] + " Total"
                     brand_totals["order"] = 1
 
+                    # Manager subtotals (e.g. Ayushi Total)
                     manager_totals = (
                         base
                         .groupby(["Brand Manager"], as_index=False)[agg_cols]
@@ -357,6 +362,7 @@ if st.button("🚀 Generate Analysis", type="primary"):
                     manager_totals["asin"] = manager_totals["Brand Manager"] + " Total"
                     manager_totals["order"] = 2
 
+                    # Grand total row
                     grand_total = pd.DataFrame({
                         "Brand Manager": [""],
                         "Brand": [""],
@@ -367,11 +373,13 @@ if st.button("🚀 Generate Analysis", type="primary"):
                         "order": [3],
                     })
 
+                    # Combine all
                     combined = pd.concat(
                         [base, brand_totals, manager_totals, grand_total],
                         ignore_index=True
                     )
 
+                    # Flag for grand total so it always goes last
                     combined["is_grand"] = (combined["asin"] == "Grand Total").astype(int)
 
                     combined = combined.sort_values(
@@ -379,6 +387,7 @@ if st.button("🚀 Generate Analysis", type="primary"):
                         ascending=[True, True, True, True, False]
                     )
 
+                    # Rename columns like Excel pivot
                     combined = combined.rename(
                         columns={
                             "quantity": "Sum of quantity",
@@ -387,12 +396,14 @@ if st.button("🚀 Generate Analysis", type="primary"):
                         }
                     )
 
+                    # Set index to look like multi-level pivot
                     display_df = combined.drop(columns=["order", "is_grand"]).set_index(
                         ["Brand Manager", "Brand", "asin"]
                     )
 
                     st.dataframe(display_df, width="stretch")
 
+                    # Download BM / Brand / ASIN Summary
                     output4 = BytesIO()
                     with pd.ExcelWriter(output4, engine='openpyxl') as writer:
                         display_df.to_excel(
@@ -408,17 +419,18 @@ if st.button("🚀 Generate Analysis", type="primary"):
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
 
-                # Raw processed data section (with same raw_output)
+                # Raw processed data section
                 st.markdown("---")
                 st.subheader("🧾 Raw Data (Processed Orders)")
                 st.dataframe(Working, width="stretch")
 
-                # 🔹 NEW: use clearer label "Download Raw Data"
+                # Raw data download at bottom (BOTTOM) – different key
                 st.download_button(
                     label="📥 Download Raw Data (Processed Orders)",
                     data=raw_output,
                     file_name="processed_orders_raw.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="download_raw_bottom"
                 )
                 
                 st.success("✅ Analysis complete! Download the Excel files above.")
