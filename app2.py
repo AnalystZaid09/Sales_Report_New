@@ -70,7 +70,7 @@ if st.button("🚀 Generate Analysis", type="primary"):
                     pm = pm[(pm["asin"] != "") & (pm["asin"].notna()) & (pm["asin"] != "nan")]
                     st.write("✓ ASIN data cleaned")
                     
-                    st.write("**Step 4:** Creating VLOOKUP mappings...")
+                    st.write("**Step 4:** Creating VLOOKUP mappings for Brand & Brand Manager...")
                     bm_col = [c for c in pm.columns if "brand" in c and "manager" in c][0]
                     brand_col = [c for c in pm.columns if c == "brand"][0]
                     pm_unique = pm.drop_duplicates(subset="asin", keep="first")
@@ -81,8 +81,37 @@ if st.button("🚀 Generate Analysis", type="primary"):
                     Working["Brand Manager"] = Working["asin"].map(bm_map)
                     Working["Brand"] = Working["asin"].map(brand_map)
                     st.write("✓ Brand Manager and Brand mapped")
-                    
-                    st.write("**Step 5:** Filtering data...")
+
+                    # STEP 5: Cost (CP) mapping and inserting column
+                    st.write("**Step 5:** Mapping Cost (CP) column and positioning it...")
+
+                    # Try to detect CP column by name, if not, use 8th column (index 7)
+                    cp_candidates = [c for c in pm.columns if c in ["cp", "cost price", "cost"]]
+                    if cp_candidates:
+                        cp_col = cp_candidates[0]
+                    else:
+                        cp_col = pm.columns[7]  # 8th column (A:J → CP at position 8)
+
+                    cp_map = pm_unique.set_index("asin")[cp_col]
+                    Working["cost"] = Working["asin"].map(cp_map)
+
+                    # Ensure cost is numeric
+                    Working["cost"] = pd.to_numeric(Working["cost"], errors="coerce").fillna(0)
+
+                    # 👉 FIX FOR YOUR ERROR: force sku to string if present
+                    if "sku" in Working.columns:
+                        Working["sku"] = Working["sku"].astype(str)
+
+                    # Insert "cost" between "item-price" and "item-tax" (if item-tax exists)
+                    cols = list(Working.columns)
+                    if "item-price" in cols and "cost" in cols:
+                        price_index = cols.index("item-price")
+                        cols.insert(price_index + 1, cols.pop(cols.index("cost")))
+                        Working = Working[cols]
+
+                    st.write("✓ Cost column created and placed between item-price and item-tax (where available)")
+
+                    st.write("**Step 6:** Filtering data...")
                     original_count = len(Working)
                     Working = Working[Working['quantity'] != 0]
                     Working['item-price'] = pd.to_numeric(Working['item-price'], errors='coerce')
@@ -120,8 +149,14 @@ if st.button("🚀 Generate Analysis", type="primary"):
                 st.markdown("---")
                 st.subheader("📊 Pivot Tables")
                 
-                tab1, tab2 = st.tabs(["Brand Manager Analysis", "Brand Analysis"])
+                tab1, tab2, tab3, tab4 = st.tabs([
+                    "Brand Manager Analysis",
+                    "Brand Analysis",
+                    "Brand & ASIN Summary",
+                    "BM / Brand / ASIN Summary"
+                ])
                 
+                # TAB 1: Brand Manager vs Date
                 with tab1:
                     st.write("**Daily Sales and Quantity by Brand Manager**")
                     pivot_Brand_Manager = pd.pivot_table(
@@ -131,8 +166,6 @@ if st.button("🚀 Generate Analysis", type="primary"):
                         values=["quantity", "item-price"],
                         aggfunc="sum",
                         fill_value=0,
-                        margins=True,
-                        margins_name="Grand Total"
                     )
                     pivot_Brand_Manager = pivot_Brand_Manager.swaplevel(0, 1, axis=1).sort_index(axis=1, level=0)
                     pivot_Brand_Manager = pivot_Brand_Manager.rename(
@@ -154,6 +187,7 @@ if st.button("🚀 Generate Analysis", type="primary"):
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
                 
+                # TAB 2: Brand vs Date
                 with tab2:
                     st.write("**Daily Sales and Quantity by Brand**")
                     pivot_Brand = pd.pivot_table(
@@ -163,8 +197,6 @@ if st.button("🚀 Generate Analysis", type="primary"):
                         values=["quantity", "item-price"],
                         aggfunc="sum",
                         fill_value=0,
-                        margins=True,
-                        margins_name="Grand Total"
                     )
                     pivot_Brand = pivot_Brand.swaplevel(0, 1, axis=1).sort_index(axis=1, level=0)
                     pivot_Brand = pivot_Brand.rename(
@@ -185,6 +217,169 @@ if st.button("🚀 Generate Analysis", type="primary"):
                         file_name="brand_analysis.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
+
+                # TAB 3: Brand & ASIN pivot (Brand alphabetical, Grand Total last)
+                with tab3:
+                    st.write("**Brand & ASIN Detailed Summary**")
+
+                    pivot_Brand_ASIN = pd.pivot_table(
+                        Working,
+                        index=["Brand", "asin"],
+                        values=["quantity", "item-price", "cost"],
+                        aggfunc="sum",
+                        fill_value=0
+                    )
+
+                    pivot_Brand_ASIN = pivot_Brand_ASIN.rename(
+                        columns={
+                            "quantity": "Sum of quantity",
+                            "item-price": "Sum of item-price",
+                            "cost": "Sum of cost"
+                        }
+                    )
+
+                    # Sort by Brand alphabetical then ASIN
+                    pivot_Brand_ASIN = pivot_Brand_ASIN.sort_index(level=["Brand", "asin"])
+
+                    # Grand Total row at the end
+                    grand_total_values = pivot_Brand_ASIN.sum(numeric_only=True).to_frame().T
+                    grand_total_index = pd.MultiIndex.from_tuples(
+                        [("Grand Total", "")],
+                        names=pivot_Brand_ASIN.index.names
+                    )
+                    grand_total_values.index = grand_total_index
+
+                    pivot_Brand_ASIN_with_total = pd.concat(
+                        [pivot_Brand_ASIN, grand_total_values]
+                    )
+
+                    st.dataframe(pivot_Brand_ASIN_with_total, use_container_width=True)
+
+                    # Download Brand & ASIN Summary
+                    output3 = BytesIO()
+                    with pd.ExcelWriter(output3, engine='openpyxl') as writer:
+                        pivot_Brand_ASIN_with_total.to_excel(writer, sheet_name='Brand_ASIN_Summary')
+                    output3.seek(0)
+
+                    st.download_button(
+                        label="📥 Download Brand & ASIN Summary",
+                        data=output3,
+                        file_name="brand_asin_summary.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+
+                # TAB 4: BM / Brand / ASIN pivot with subtotals & grand total
+                with tab4:
+                    st.write("**Brand Manager / Brand / ASIN Summary (with subtotals)**")
+
+                    # Base aggregation at BM + Brand + ASIN level
+                    agg_cols = ["quantity", "item-price", "cost"]
+                    base = (
+                        Working
+                        .groupby(["Brand Manager", "Brand", "asin"], dropna=False)[agg_cols]
+                        .sum()
+                        .reset_index()
+                    )
+
+                    # Sort ASIN rows by quantity desc within each Brand & Manager
+                    base["order"] = 0
+                    base = base.sort_values(
+                        by=["Brand Manager", "Brand", "quantity"],
+                        ascending=[True, True, False]
+                    )
+
+                    # Brand subtotals (e.g. Beetel Total)
+                    brand_totals = (
+                        base
+                        .groupby(["Brand Manager", "Brand"], as_index=False)[agg_cols]
+                        .sum()
+                    )
+                    brand_totals["asin"] = brand_totals["Brand"] + " Total"
+                    brand_totals["order"] = 1
+
+                    # Manager subtotals (e.g. Ayushi Total)
+                    manager_totals = (
+                        base
+                        .groupby(["Brand Manager"], as_index=False)[agg_cols]
+                        .sum()
+                    )
+                    manager_totals["Brand"] = ""
+                    manager_totals["asin"] = manager_totals["Brand Manager"] + " Total"
+                    manager_totals["order"] = 2
+
+                    # Grand total row
+                    grand_total = pd.DataFrame({
+                        "Brand Manager": [""],
+                        "Brand": [""],
+                        "asin": ["Grand Total"],
+                        "quantity": [base["quantity"].sum()],
+                        "item-price": [base["item-price"].sum()],
+                        "cost": [base["cost"].sum()],
+                        "order": [3],
+                    })
+
+                    # Combine all
+                    combined = pd.concat(
+                        [base, brand_totals, manager_totals, grand_total],
+                        ignore_index=True
+                    )
+
+                    # Flag for grand total so it always goes last
+                    combined["is_grand"] = (combined["asin"] == "Grand Total").astype(int)
+
+                    combined = combined.sort_values(
+                        by=["is_grand", "Brand Manager", "Brand", "order", "quantity"],
+                        ascending=[True, True, True, True, False]
+                    )
+
+                    # Rename columns like Excel pivot
+                    combined = combined.rename(
+                        columns={
+                            "quantity": "Sum of quantity",
+                            "item-price": "Sum of item-price",
+                            "cost": "Sum of cost",
+                        }
+                    )
+
+                    # Set index to look like multi-level pivot
+                    display_df = combined.drop(columns=["order", "is_grand"]).set_index(
+                        ["Brand Manager", "Brand", "asin"]
+                    )
+
+                    st.dataframe(display_df, use_container_width=True)
+
+                    # Download BM / Brand / ASIN Summary
+                    output4 = BytesIO()
+                    with pd.ExcelWriter(output4, engine='openpyxl') as writer:
+                        display_df.to_excel(
+                            writer,
+                            sheet_name='BM_Brand_ASIN_Summary'
+                        )
+                    output4.seek(0)
+
+                    st.download_button(
+                        label="📥 Download BM / Brand / ASIN Summary",
+                        data=output4,
+                        file_name="bm_brand_asin_summary.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+
+                # Raw processed data section
+                st.markdown("---")
+                st.subheader("🧾 Raw Data (Processed Orders)")
+                st.dataframe(Working, use_container_width=True)
+
+                raw_output = BytesIO()
+                with pd.ExcelWriter(raw_output, engine='openpyxl') as writer:
+                    Working.to_excel(writer, sheet_name='Processed Orders', index=False)
+                raw_output.seek(0)
+
+                st.download_button(
+                    label="📥 Download Raw Processed Data",
+                    data=raw_output,
+                    file_name="processed_orders_raw.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
                 
                 st.success("✅ Analysis complete! Download the Excel files above.")
                 
@@ -197,24 +392,24 @@ with st.expander("ℹ️ How to Use", expanded=not (orders_file and pm_file)):
     st.markdown("""
     ### Instructions:
     
-    1. **Upload Orders File**: Click on the first file uploader and select your `orders.xlsx` file
-       - Must contain columns: `asin`, `quantity`, `item-price`, `product-name`, `item-status`, `purchase-date`
+    1. **Upload Orders File**: Click on the first file uploader and select your `orders.xlsx` file  
+       - Must contain columns: `asin`, `quantity`, `item-price`, `item-tax`, `product-name`, `item-status`, `purchase-date`
     
-    2. **Upload Product Master File**: Click on the second file uploader and select your `PM.xlsx` file
-       - Must contain columns: `ASIN`, `Brand Manager`, `Brand`
+    2. **Upload Product Master File**: Click on the second file uploader and select your `PM.xlsx` file  
+       - Must contain columns: `ASIN`, `Brand Manager`, `Brand`, `CP` (ideally in column 8)
     
     3. **Generate Analysis**: Click the "Generate Analysis" button to process the data
     
     4. **View Results**: 
-       - Check the key metrics dashboard
-       - Explore the pivot tables in each tab
-       - Download Excel files for further analysis
+       - Check the key metrics dashboard  
+       - Explore all four pivot table tabs  
+       - View and download the processed raw data table
     
     ### Data Processing:
-    - Removes cancelled orders and invalid entries
-    - Maps Brand Manager and Brand from Product Master
-    - Creates daily pivot tables with grand totals
-    - Filters out zero quantities and prices
+    - Removes cancelled orders and invalid entries  
+    - Maps Brand Manager, Brand, and Cost (CP) from Product Master  
+    - Creates daily and Brand/ASIN and BM/Brand/ASIN pivot tables with subtotals  
+    - Filters out zero quantities and prices  
     """)
 
 # Footer
