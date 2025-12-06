@@ -98,7 +98,7 @@ if st.button("🚀 Generate Analysis", type="primary"):
                     # Ensure cost is numeric
                     Working["cost"] = pd.to_numeric(Working["cost"], errors="coerce").fillna(0)
 
-                    # 👉 FIX FOR YOUR ERROR: force sku to string if present
+                    # FIX: sku mixed type → string (Arrow compatibility)
                     if "sku" in Working.columns:
                         Working["sku"] = Working["sku"].astype(str)
 
@@ -173,7 +173,7 @@ if st.button("🚀 Generate Analysis", type="primary"):
                         level=1
                     )
                     
-                    st.dataframe(pivot_Brand_Manager, use_container_width=True)
+                    st.dataframe(pivot_Brand_Manager, width="stretch")
                     
                     # Download button
                     output1 = BytesIO()
@@ -204,7 +204,7 @@ if st.button("🚀 Generate Analysis", type="primary"):
                         level=1
                     )
                     
-                    st.dataframe(pivot_Brand, use_container_width=True)
+                    st.dataframe(pivot_Brand, width="stretch")
                     
                     # Download button
                     output2 = BytesIO()
@@ -253,7 +253,7 @@ if st.button("🚀 Generate Analysis", type="primary"):
                         [pivot_Brand_ASIN, grand_total_values]
                     )
 
-                    st.dataframe(pivot_Brand_ASIN_with_total, use_container_width=True)
+                    st.dataframe(pivot_Brand_ASIN_with_total, width="stretch")
 
                     # Download Brand & ASIN Summary
                     output3 = BytesIO()
@@ -346,7 +346,7 @@ if st.button("🚀 Generate Analysis", type="primary"):
                         ["Brand Manager", "Brand", "asin"]
                     )
 
-                    st.dataframe(display_df, use_container_width=True)
+                    st.dataframe(display_df, width="stretch")
 
                     # Download BM / Brand / ASIN Summary
                     output4 = BytesIO()
@@ -367,7 +367,7 @@ if st.button("🚀 Generate Analysis", type="primary"):
                 # Raw processed data section
                 st.markdown("---")
                 st.subheader("🧾 Raw Data (Processed Orders)")
-                st.dataframe(Working, use_container_width=True)
+                st.dataframe(Working, width="stretch")
 
                 raw_output = BytesIO()
                 with pd.ExcelWriter(raw_output, engine='openpyxl') as writer:
