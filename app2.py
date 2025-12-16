@@ -175,6 +175,7 @@ if st.button("🚀 Generate Analysis"):
             .groupby(["asin", "Brand"])[["quantity", "item-price", "cost"]]
             .sum()
             .reset_index()
+            .sort_values("quantity", ascending=False)   # 🔥 SORT
         )
 
         total_row = brand_asin[["quantity", "item-price", "cost"]].sum().to_frame().T
@@ -188,11 +189,15 @@ if st.button("🚀 Generate Analysis"):
         out = BytesIO()
         with pd.ExcelWriter(out, engine="openpyxl") as writer:
             brand_asin_final.to_excel(writer, index=False,
-                                      sheet_name="Brand_ASIN_Summary")
+                                    sheet_name="Brand_ASIN_Summary")
         out.seek(0)
 
-        st.download_button("📥 Download Brand & ASIN Summary", out,
-                           "brand_asin_summary.xlsx")
+        st.download_button(
+            "📥 Download Brand & ASIN Summary",
+            out,
+            "brand_asin_summary.xlsx"
+        )
+
 
     # ==================================================
     # TAB 4 – BM / BRAND / ASIN SUMMARY
@@ -205,6 +210,7 @@ if st.button("🚀 Generate Analysis"):
             ]
             .sum()
             .reset_index()
+            .sort_values("quantity", ascending=False)   # 🔥 SORT
         )
 
         total_row = bm_brand_asin[["quantity", "item-price", "cost"]].sum().to_frame().T
@@ -221,11 +227,15 @@ if st.button("🚀 Generate Analysis"):
         out = BytesIO()
         with pd.ExcelWriter(out, engine="openpyxl") as writer:
             bm_brand_asin_final.to_excel(writer, index=False,
-                                         sheet_name="BM_Brand_ASIN")
+                                        sheet_name="BM_Brand_ASIN")
         out.seek(0)
 
-        st.download_button("📥 Download BM / Brand / ASIN Summary", out,
-                           "bm_brand_asin_summary.xlsx")
+        st.download_button(
+            "📥 Download BM / Brand / ASIN Summary",
+            out,
+            "bm_brand_asin_summary.xlsx"
+        )
+
 
     # ==================================================
     # TAB 5 – SUMMARY PIVOTS
@@ -238,6 +248,7 @@ if st.button("🚀 Generate Analysis"):
             .groupby("Brand")[["quantity", "item-price", "cost"]]
             .sum()
             .reset_index()
+            .sort_values("quantity", ascending=False)   # 🔥 SORT
         )
 
         brand_total = brand_summary[["quantity", "item-price", "cost"]].sum().to_frame().T
@@ -246,6 +257,7 @@ if st.button("🚀 Generate Analysis"):
         brand_summary_final = pd.concat(
             [brand_summary, brand_total], ignore_index=True
         )
+
 
         st.dataframe(brand_summary_final, use_container_width=True)
 
@@ -265,6 +277,7 @@ if st.button("🚀 Generate Analysis"):
             .groupby("Brand Manager")[["quantity", "item-price", "cost"]]
             .sum()
             .reset_index()
+            .sort_values("quantity", ascending=False)   # 🔥 SORT
         )
 
         bm_total = bm_summary[["quantity", "item-price", "cost"]].sum().to_frame().T
@@ -273,6 +286,7 @@ if st.button("🚀 Generate Analysis"):
         bm_summary_final = pd.concat(
             [bm_summary, bm_total], ignore_index=True
         )
+
 
         st.dataframe(bm_summary_final, use_container_width=True)
 
