@@ -102,9 +102,13 @@ if st.button("🚀 Generate Analysis"):
         pivot_bm[("Grand Total", "Total Sum of quantity")] = (
             pivot_bm.loc[:, pd.IndexSlice[:, "Sum of quantity"]].sum(axis=1)
         )
+        pivot_bm[("Grand Total", "Total Sum of item-price")] = (
+            pivot_bm.loc[:, pd.IndexSlice[:, "Sum of item-price"]].sum(axis=1)
+        )
         pivot_bm[("Grand Total", "Total Sum of cost")] = (
             pivot_bm.loc[:, pd.IndexSlice[:, "Sum of cost"]].sum(axis=1)
         )
+        
 
         # 🔥 BOTTOM GRAND TOTAL ROW
         grand_row = pivot_bm.sum(axis=0).to_frame().T
@@ -146,10 +150,15 @@ if st.button("🚀 Generate Analysis"):
         pivot_brand[("Grand Total", "Total Sum of quantity")] = (
             pivot_brand.loc[:, pd.IndexSlice[:, "Sum of quantity"]].sum(axis=1)
         )
+        pivot_brand[("Grand Total", "Total Sum of item-price")] = (
+            pivot_brand.loc[:, pd.IndexSlice[:, "Sum of item-price"]].sum(axis=1)
+        )
+        
         pivot_brand[("Grand Total", "Total Sum of cost")] = (
             pivot_brand.loc[:, pd.IndexSlice[:, "Sum of cost"]].sum(axis=1)
         )
-
+        
+        
         grand_row = pivot_brand.sum(axis=0).to_frame().T
         grand_row.index = ["Grand Total"]
 
