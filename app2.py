@@ -64,6 +64,15 @@ if st.button("🚀 Generate Analysis"):
     Working["Vendor SKU"] = Working["asin"].map(
         pm_unique.set_index("asin")[vendor_sku_col]
     )
+    
+    # --------------------------------------------------
+    # FORCE NUMERIC COLUMNS (VERY IMPORTANT)
+    # --------------------------------------------------
+    num_cols = ["quantity", "item-price", "cost"]
+
+    for col in num_cols:
+        Working[col] = pd.to_numeric(Working[col], errors="coerce").fillna(0)
+
 
     # --------------------------------------------------
     # Filters
@@ -74,18 +83,12 @@ if st.button("🚀 Generate Analysis"):
         (Working["item-status"] != "Cancelled")
     ]
     
+    Working[num_cols] = Working[num_cols].fillna(0)
+
     for col in Working.columns:
         if Working[col].dtype == "object":
             Working[col] = Working[col].astype(str)
             
-    # --------------------------------------------------
-    # FORCE NUMERIC COLUMNS (VERY IMPORTANT)
-    # --------------------------------------------------
-    num_cols = ["quantity", "item-price", "cost"]
-
-    for col in num_cols:
-        Working[col] = pd.to_numeric(Working[col], errors="coerce").fillna(0)
-
     # --------------------------------------------------
     # Tabs
     # --------------------------------------------------
@@ -201,7 +204,7 @@ if st.button("🚀 Generate Analysis"):
     with tab3:
         brand_asin = (
             Working
-            .groupby(["asin", "Brand"])[["quantity", "item-price", "cost"]]
+            .groupby(["asin","Vendor SKU","Brand"])[["quantity", "item-price", "cost"]]
             .sum()
             .reset_index()
             .sort_values("quantity", ascending=False)
@@ -232,7 +235,7 @@ if st.button("🚀 Generate Analysis"):
     with tab4:
         bm_brand_asin = (
             Working
-            .groupby(["asin", "Brand", "Brand Manager"])[
+            .groupby(["asin","Vendor SKU","Brand", "Brand Manager"])[
                 ["quantity", "item-price", "cost"]
             ]
             .sum()
