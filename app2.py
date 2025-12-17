@@ -77,6 +77,14 @@ if st.button("🚀 Generate Analysis"):
     for col in Working.columns:
         if Working[col].dtype == "object":
             Working[col] = Working[col].astype(str)
+            
+    # --------------------------------------------------
+    # FORCE NUMERIC COLUMNS (VERY IMPORTANT)
+    # --------------------------------------------------
+    num_cols = ["quantity", "item-price", "cost"]
+
+    for col in num_cols:
+        Working[col] = pd.to_numeric(Working[col], errors="coerce").fillna(0)
 
     # --------------------------------------------------
     # Tabs
