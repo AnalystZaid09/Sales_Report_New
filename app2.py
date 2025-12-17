@@ -58,6 +58,12 @@ if st.button("🚀 Generate Analysis"):
         Working["asin"].map(pm_unique.set_index("asin")["cp"]),
         errors="coerce"
     ).fillna(0)
+    
+    vendor_sku_col = pm_unique.columns[3]  # Excel column 4
+
+    Working["Vendor SKU"] = Working["asin"].map(
+        pm_unique.set_index("asin")[vendor_sku_col]
+    )
 
     # --------------------------------------------------
     # Filters
@@ -67,6 +73,10 @@ if st.button("🚀 Generate Analysis"):
         (Working["item-price"] != 0) &
         (Working["item-status"] != "Cancelled")
     ]
+    
+    for col in Working.columns:
+        if Working[col].dtype == "object":
+            Working[col] = Working[col].astype(str)
 
     # --------------------------------------------------
     # Tabs
@@ -261,6 +271,17 @@ if st.button("🚀 Generate Analysis"):
 
         brand_summary_final = pd.concat([brand_summary, brand_total], ignore_index=True)
         st.dataframe(brand_summary_final, use_container_width=True)
+        
+        out = BytesIO()
+        with pd.ExcelWriter(out, engine="openpyxl") as writer:
+            brand_summary_final.to_excel(writer, sheet_name="Brand Summary", index=False)
+        out.seek(0)
+
+        st.download_button(
+            "📥 Download Brand Report",
+            out,
+            "Brand_report.xlsx"
+        )
 
         bm_summary = (
             Working
@@ -275,11 +296,35 @@ if st.button("🚀 Generate Analysis"):
 
         bm_summary_final = pd.concat([bm_summary, bm_total], ignore_index=True)
         st.dataframe(bm_summary_final, use_container_width=True)
+        
+        # 📥 DOWNLOAD SUMMARY REPORT
+        out = BytesIO()
+        with pd.ExcelWriter(out, engine="openpyxl") as writer:
+            bm_summary_final.to_excel(writer, sheet_name="BM Summary", index=False)
+        out.seek(0)
+
+        st.download_button(
+            "📥 Download Brand Manager Report",
+            out,
+            "Brand_Manager_report.xlsx"
+        )
 
     # ==================================================
     # TAB 6 – RAW DATA
     # ==================================================
     with tab6:
         st.dataframe(Working, use_container_width=True)
+     
+        # 📥 DOWNLOAD RAW DATA
+        out = BytesIO()
+        with pd.ExcelWriter(out, engine="openpyxl") as writer:
+            Working.to_excel(writer, index=False, sheet_name="Raw Data")
+        out.seek(0)
+
+        st.download_button(
+            "📥 Download Raw Data",
+            out,
+            "raw_data.xlsx"
+        )
 
     st.success("✅ All reports generated correctly (date-wise & grand totals fixed)")
