@@ -204,7 +204,7 @@ if st.button("🚀 Generate Analysis"):
     with tab3:
         brand_asin = (
             Working
-            .groupby(["asin","Vendor SKU","Brand"])[["quantity", "item-price", "cost"]]
+            .groupby(["asin","Vendor SKU","Brand","product-name"])[["quantity", "item-price", "cost"]]
             .sum()
             .reset_index()
             .sort_values("quantity", ascending=False)
@@ -235,7 +235,7 @@ if st.button("🚀 Generate Analysis"):
     with tab4:
         bm_brand_asin = (
             Working
-            .groupby(["asin","Vendor SKU","Brand", "Brand Manager"])[
+            .groupby(["asin","Vendor SKU","Brand","Brand Manager","product-name"])[
                 ["quantity", "item-price", "cost"]
             ]
             .sum()
@@ -339,3 +339,4 @@ if st.button("🚀 Generate Analysis"):
         )
 
     st.success("✅ All reports generated correctly (date-wise & grand totals fixed)")
+
