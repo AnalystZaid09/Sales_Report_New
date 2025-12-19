@@ -212,7 +212,9 @@ if st.button("🚀 Generate Analysis"):
 
         total_row = brand_asin[["quantity", "item-price", "cost"]].sum().to_frame().T
         total_row.insert(0, "asin", "Grand Total")
-        total_row.insert(1, "Brand", "")
+        total_row.insert(1, "Vendor SKU", "")
+        total_row.insert(2, "Brand", "")
+        total_row.insert(3, "product-name", "")
 
         brand_asin_final = pd.concat([brand_asin, total_row], ignore_index=True)
 
@@ -245,8 +247,11 @@ if st.button("🚀 Generate Analysis"):
 
         total_row = bm_brand_asin[["quantity", "item-price", "cost"]].sum().to_frame().T
         total_row.insert(0, "asin", "Grand Total")
-        total_row.insert(1, "Brand", "")
-        total_row.insert(2, "Brand Manager", "")
+        total_row.insert(1, "Vendor SKU", "")
+        total_row.insert(2, "Brand", "")
+        total_row.insert(3, "Brand Manager", "")
+        total_row.insert(4, "product-name", "")
+
 
         bm_brand_asin_final = pd.concat(
             [bm_brand_asin, total_row], ignore_index=True
@@ -339,4 +344,5 @@ if st.button("🚀 Generate Analysis"):
         )
 
     st.success("✅ All reports generated correctly (date-wise & grand totals fixed)")
+
 
