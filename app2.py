@@ -204,9 +204,15 @@ if st.button("🚀 Generate Analysis"):
     with tab3:
         brand_asin = (
             Working
-            .groupby(["asin","Vendor SKU","Brand","product-name"])[["quantity", "item-price", "cost"]]
-            .sum()
-            .reset_index()
+            .groupby("asin", as_index=False)
+            .agg({
+                "Vendor SKU": "first",
+                "Brand": "first",
+                "product-name": "first",
+                "quantity": "sum",
+                "item-price": "sum",
+                "cost": "sum"
+            })
             .sort_values("quantity", ascending=False)
         )
 
@@ -235,13 +241,19 @@ if st.button("🚀 Generate Analysis"):
     # TAB 4 – BM / BRAND / ASIN SUMMARY
     # ==================================================
     with tab4:
+
         bm_brand_asin = (
             Working
-            .groupby(["asin","Vendor SKU","Brand","Brand Manager","product-name"])[
-                ["quantity", "item-price", "cost"]
-            ]
-            .sum()
-            .reset_index()
+            .groupby("asin", as_index=False)
+            .agg({
+                "Vendor SKU": "first",
+                "Brand": "first",
+                "Brand Manager": "first",
+                "product-name": "first",
+                "quantity": "sum",
+                "item-price": "sum",
+                "cost": "sum"
+            })
             .sort_values("quantity", ascending=False)
         )
 
@@ -251,7 +263,6 @@ if st.button("🚀 Generate Analysis"):
         total_row.insert(2, "Brand", "")
         total_row.insert(3, "Brand Manager", "")
         total_row.insert(4, "product-name", "")
-
 
         bm_brand_asin_final = pd.concat(
             [bm_brand_asin, total_row], ignore_index=True
