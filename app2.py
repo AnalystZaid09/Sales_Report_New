@@ -13,7 +13,10 @@ st.title("📊 Order Analysis Dashboard")
 # --------------------------------------------------
 c1, c2 = st.columns(2)
 with c1:
-    orders_file = st.file_uploader("Upload Orders File", type=["xlsx"])
+    orders_file = st.file_uploader(
+    "Upload Orders File (.xlsx or .txt)",
+    type=["xlsx", "txt"]
+)
 with c2:
     pm_file = st.file_uploader("Upload Purchase Master File", type=["xlsx"])
 
@@ -29,7 +32,23 @@ if st.button("🚀 Generate Analysis"):
     # --------------------------------------------------
     # Load data
     # --------------------------------------------------
-    Working = pd.read_excel(orders_file)
+    # --------------------------------------------------
+    # Load Orders File (Excel OR TXT)
+    # --------------------------------------------------
+    if orders_file.name.endswith(".xlsx"):
+        Working = pd.read_excel(orders_file)
+    
+    elif orders_file.name.endswith(".txt"):
+        Working = pd.read_csv(
+            orders_file,
+            sep="\t",          # TAB separated
+            encoding="utf-8",  # change to 'latin1' if needed
+            dtype=str          # safer for Amazon reports
+        )
+    else:
+        st.error("Unsupported file format")
+        st.stop()
+
     pm = pd.read_excel(pm_file)
 
     # --------------------------------------------------
