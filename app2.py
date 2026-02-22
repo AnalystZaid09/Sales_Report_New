@@ -14,8 +14,9 @@ st.title("📊 Order Analysis Dashboard")
 c1, c2 = st.columns(2)
 with c1:
     orders_file = st.file_uploader(
-    "Upload Orders File (.xlsx or .txt)",
-    type=["xlsx", "txt"]
+    "Upload Orders File(s) (.xlsx or .txt)",
+    type=["xlsx", "txt"],
+    accept_multiple_files=True
 )
 with c2:
     pm_file = st.file_uploader("Upload Purchase Master File", type=["xlsx"])
@@ -25,29 +26,36 @@ with c2:
 # --------------------------------------------------
 if st.button("🚀 Generate Analysis"):
 
-    if orders_file is None or pm_file is None:
+    if not orders_file or pm_file is None:
         st.error("Please upload both files")
         st.stop()
-
-    # --------------------------------------------------
-    # Load data
-    # --------------------------------------------------
     # --------------------------------------------------
     # Load Orders File (Excel OR TXT)
     # --------------------------------------------------
-    if orders_file.name.endswith(".xlsx"):
-        Working = pd.read_excel(orders_file)
-    
-    elif orders_file.name.endswith(".txt"):
-        Working = pd.read_csv(
-            orders_file,
-            sep="\t",          # TAB separated
-            encoding="utf-8",  # change to 'latin1' if needed
-            dtype=str          # safer for Amazon reports
-        )
-    else:
-        st.error("Unsupported file format")
-        st.stop()
+    all_dataframes = []
+
+    for file in orders_file:
+        
+        if file.name.endswith(".xlsx"):
+            df = pd.read_excel(file)
+            
+        elif file.name.endswith(".txt"):
+            df = pd.read_csv(
+                file,
+                sep="\t",
+                encoding="utf-8",
+                dtype=str
+            )
+        else:
+            continue
+        
+        # Standardize column names immediately
+        df.columns = df.columns.str.strip().str.lower()
+        
+        all_dataframes.append(df)
+
+    # 🔥 CONCAT BASED ON HEADER NAMES
+    Working = pd.concat(all_dataframes, ignore_index=True, sort=False)
 
     pm = pd.read_excel(pm_file)
 
