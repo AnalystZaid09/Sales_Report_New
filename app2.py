@@ -75,10 +75,26 @@ if st.button("🚀 Generate Analysis"):
     # Mapping
     # --------------------------------------------------
     bm_col = [c for c in pm.columns if "brand" in c and "manager" in c][0]
-
+    
     Working["Brand"] = Working["asin"].map(pm_unique.set_index("asin")["brand"])
     Working["Brand Manager"] = Working["asin"].map(
         pm_unique.set_index("asin")[bm_col]
+    )
+    # --------------------------------------------------
+    # Standardize Brand / Brand Manager text
+    # --------------------------------------------------
+    Working["Brand"] = (
+        Working["Brand"]
+        .astype(str)
+        .str.strip()
+        .str.title()
+    )
+    
+    Working["Brand Manager"] = (
+        Working["Brand Manager"]
+        .astype(str)
+        .str.strip()
+        .str.title()
     )
 
     Working["cost"] = pd.to_numeric(
